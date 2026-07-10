@@ -86,20 +86,24 @@ def build_and_install():
                 "enable-md2",
                 "no-shared",
                 "no-asm",
+                "no-makedepend",
             ],
             "Configure",
             nc.work_dir
         )
 
+        # Desktop builds consume only the static libraries and headers. Avoid
+        # the OpenSSL CLI target, whose 1.1.1w dependency graph breaks on the
+        # current hosted Windows toolchain before the libraries are installed.
         nc.run_command(
-            [ "nmake" ],
-            "Build",
+            [ "nmake", "build_libs" ],
+            "Build (libcrypto + libssl only)",
             nc.work_dir
         )
 
         nc.run_command(
-            [ "nmake", "install" ],
-            "Install",
+            [ "nmake", "install_dev" ],
+            "Install (headers + static libs)",
             nc.work_dir
         )
 
