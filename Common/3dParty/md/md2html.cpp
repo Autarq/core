@@ -1,6 +1,6 @@
 #include "md2html.h"
 
-#include "md/src/md4c-html.h"
+#include "md4c/src/md4c-html.h"
 #include "../../../DesktopEditor/common/File.h"
 
 namespace Md
@@ -104,4 +104,3 @@ bool ConvertMdFileToHtml(const std::wstring& wsPathToMdFile, const std::wstring&
 	return bResult;
 }
 }
-
