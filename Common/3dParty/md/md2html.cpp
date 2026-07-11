@@ -1,6 +1,16 @@
 #include "md2html.h"
 
-#include "md4c/src/md4c-html.h"
+#if defined(__has_include)
+# if __has_include("md/src/md4c-html.h")
+#  include "md/src/md4c-html.h"
+# elif __has_include("md4c/src/md4c-html.h")
+#  include "md4c/src/md4c-html.h"
+# else
+#  error "md4c-html.h was not found in a supported third-party layout"
+# endif
+#else
+# include "md/src/md4c-html.h"
+#endif
 #include "../../../DesktopEditor/common/File.h"
 
 namespace Md

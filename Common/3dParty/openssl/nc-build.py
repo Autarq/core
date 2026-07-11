@@ -32,6 +32,13 @@ def fetch_and_patch():
         ],
         "Clone repo"
     )
+
+    if nc.is_windows():
+        nc.run_command(
+            [ "git", "apply", "--unidiff-zero", script_dir / "patches" / "windows-library-only.patch" ],
+            "Apply Windows library-only build patch",
+            nc.work_dir
+        )
     
     nc.create_work_dir_ok_marker()
 
@@ -96,7 +103,7 @@ def build_and_install():
         # the OpenSSL CLI target, whose 1.1.1w dependency graph breaks on the
         # current hosted Windows toolchain before the libraries are installed.
         nc.run_command(
-            [ "nmake", "build_libs" ],
+            [ "nmake", "build_libs_nodep" ],
             "Build (libcrypto + libssl only)",
             nc.work_dir
         )

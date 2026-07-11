@@ -1,0 +1,7 @@
+diff --git a/Configurations/windows-makefile.tmpl b/Configurations/windows-makefile.tmpl
+index 2a5d4ef..1541c16 100644
+--- a/Configurations/windows-makefile.tmpl
++++ b/Configurations/windows-makefile.tmpl
+@@ -446 +446 @@
+-install_runtime_libs: build_libs
++install_runtime_libs: build_libs_nodep
