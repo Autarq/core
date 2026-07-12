@@ -1,0 +1,91 @@
+name: Windows OpenSSL smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/windows-openssl-smoke.yml"
+      - "Common/3dParty/build_3rdparty_common.py"
+      - "Common/3dParty/openssl/**"
+  pull_request:
+    paths:
+      - ".github/workflows/windows-openssl-smoke.yml"
+      - "Common/3dParty/build_3rdparty_common.py"
+      - "Common/3dParty/openssl/**"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    env:
+      PYTHONUTF8: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Verify native tools
+        shell: pwsh
+        run: |
+          foreach ($tool in 'cl', 'nmake', 'perl', 'python', 'git') {
+            $command = Get-Command $tool -ErrorAction Stop
+            Write-Host ("{0,-8} -> {1}" -f $tool, $command.Source)
+          }
+          perl --version | Select-String 'This is perl'
+          python --version
+
+      - name: Build and install OpenSSL libraries
+        shell: pwsh
+        run: |
+          $workDir = Join-Path $env:RUNNER_TEMP 'openssl-work'
+          $installDir = Join-Path $env:RUNNER_TEMP 'openssl-install'
+
+          python Common/3dParty/openssl/nc-build.py `
+            $workDir `
+            $installDir `
+            force-redo
+
+          foreach ($library in 'libcrypto.lib', 'libssl.lib') {
+            $path = Join-Path $installDir "lib\$library"
+            if (-not (Test-Path -LiteralPath $path)) {
+              throw "Expected OpenSSL library is missing: $path"
+            }
+          }
+
+      - name: Report OpenSSL source and makefile state
+        if: failure()
+        shell: pwsh
+        run: |
+          $workDir = Join-Path $env:RUNNER_TEMP 'openssl-work'
+          Write-Host "work dir: $workDir"
+          Write-Host "work dir exists: $(Test-Path -LiteralPath $workDir)"
+
+          foreach ($relativePath in @(
+            'crypto\aes\aes_cbc.c',
+            'crypto\aes\aes_cfb.c',
+            'ssl\ssl_lib.c',
+            'Configurations\windows-makefile.tmpl'
+          )) {
+            $path = Join-Path $workDir $relativePath
+            Write-Host "$relativePath exists: $(Test-Path -LiteralPath $path)"
+            if (Test-Path -LiteralPath $path) {
+              Get-Item -LiteralPath $path | Format-List FullName,Length,Attributes
+            }
+          }
+
+          $makefile = Join-Path $workDir 'makefile'
+          if (Test-Path -LiteralPath $makefile) {
+            Select-String -Path $makefile -Pattern `
+              '^SRCDIR=', `
+              '^BLDDIR=', `
+              '^install_runtime_libs:', `
+              '^crypto\\aes\\aes_cfb\.obj:'
+          }
