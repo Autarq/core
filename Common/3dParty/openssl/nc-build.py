@@ -105,7 +105,8 @@ def build_and_install():
         nc.run_command(
             [ "nmake", "libcrypto.lib", "libssl.lib" ],
             "Build (libcrypto + libssl only)",
-            nc.work_dir
+            nc.work_dir,
+            verbose=True
         )
 
         nc.run_command(
