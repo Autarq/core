@@ -99,11 +99,11 @@ def build_and_install():
             nc.work_dir
         )
 
-        # Desktop builds consume only the static libraries and headers. Avoid
-        # the OpenSSL CLI target, whose 1.1.1w dependency graph breaks on the
-        # current hosted Windows toolchain before the libraries are installed.
+        # OpenSSL 1.1.1w includes internal apps and test libraries in
+        # build_libs_nodep. Build the two public static libraries explicitly so
+        # the broken apps/apps.c dependency is never entered.
         nc.run_command(
-            [ "nmake", "build_libs_nodep" ],
+            [ "nmake", "libcrypto.lib", "libssl.lib" ],
             "Build (libcrypto + libssl only)",
             nc.work_dir
         )
