@@ -99,9 +99,17 @@ def build_and_install():
             nc.work_dir
         )
 
-        # OpenSSL 1.1.1w includes internal apps and test libraries in
-        # build_libs_nodep. Build the two public static libraries explicitly so
-        # the broken apps/apps.c dependency is never entered.
+        # Generate mandatory configuration headers before addressing the two
+        # public static libraries directly. OpenSSL 1.1.1w also includes
+        # internal apps and test libraries in build_libs_nodep, which desktop
+        # builds neither consume nor need to compile.
+        nc.run_command(
+            [ "nmake", "build_generated" ],
+            "Generate mandatory headers",
+            nc.work_dir,
+            verbose=True
+        )
+
         nc.run_command(
             [ "nmake", "libcrypto.lib", "libssl.lib" ],
             "Build (libcrypto + libssl only)",
