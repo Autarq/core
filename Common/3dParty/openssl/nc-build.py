@@ -20,11 +20,63 @@ nc.init_for_dep(
     forceredo = len(sys.argv) > 3 and sys.argv[3] == "force-redo"
 )
 
+def missing_tracked_files() -> list[str]:
+    tracked = nc.capture_process_output(
+        [ "git", "-C", str(nc.work_dir), "ls-files", "-z" ]
+    ).split("\0")
+    return [path for path in tracked if path and not (nc.work_dir / path).exists()]
+
+def ensure_complete_checkout():
+    missing = missing_tracked_files()
+    if not missing:
+        return
+
+    print(
+        f"OpenSSL checkout is missing {len(missing)} tracked file(s); "
+        "restoring it with a single-worker checkout."
+    )
+    nc.run_command(
+        [ "git", "-c", "checkout.workers=1", "checkout", "--force", "HEAD", "--", "." ],
+        "Restore complete source checkout",
+        nc.work_dir
+    )
+
+    missing = missing_tracked_files()
+    if missing:
+        preview = ", ".join(missing[:10])
+        nc.abort_op(
+            f"Source checkout remains incomplete ({preview})",
+            keep_work=True
+        )
+
+def ensure_required_sources():
+    required = [
+        "crypto/aes/aes_cbc.c",
+        "crypto/aes/aes_cfb.c",
+        "ssl/ssl_lib.c",
+    ]
+    missing = [path for path in required if not (nc.work_dir / path).is_file()]
+    if not missing:
+        return
+
+    nc.run_command(
+        [ "git", "checkout", "--force", "HEAD", "--", *missing ],
+        "Restore required OpenSSL sources",
+        nc.work_dir
+    )
+    missing = [path for path in required if not (nc.work_dir / path).is_file()]
+    if missing:
+        nc.abort_op(
+            f"Required source files are missing: {', '.join(missing)}",
+            keep_work=True
+        )
+
 def fetch_and_patch():
     nc.create_workdir()
 
     nc.run_command(
         [   "git", "-c", "core.autocrlf=false", "-c", "core.eol=lf",
+            "-c", "checkout.workers=1",
             "clone", "--depth", "1",
             "--branch", "OpenSSL_1_1_1w",
             "https://github.com/openssl/openssl.git",
@@ -32,6 +84,9 @@ def fetch_and_patch():
         ],
         "Clone repo"
     )
+
+    if nc.is_windows():
+        ensure_complete_checkout()
 
     if nc.is_windows():
         nc.run_command(
@@ -84,6 +139,7 @@ def build_and_install():
 
     elif nc.is_windows():
         ossl_target = openssl_windows_target()
+        ensure_required_sources()
         nc.run_command(
             [   shutil.which("perl"),
                 "Configure",
